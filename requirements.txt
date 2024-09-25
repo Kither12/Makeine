@@ -1,0 +1,9 @@
+diffusers==0.30.3
+edge_tts==6.1.12
+moviepy==1.0.3
+protobuf==5.28.2
+python-dotenv==1.0.1
+torch==2.4.1
+whisper_timestamped==1.15.4
+google-generativeai
+accelerate
