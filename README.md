@@ -18,7 +18,7 @@ bin/pip install -r requirements.txt
 Rename the `.env.example` file to `.env` and fill the API key inside
 
 - **Note:** The project used [MoviePy](https://pypi.org/project/moviepy/) to compose the video, which required [ImageMagick](https://imagemagick.org/index.php) to be installed in your machine
-- **Another note:** It's required about 4 GB of RAM to run.
+- **Another note:** It's required about 4 GB of VRAM to run.
 
 ## Inference
 
