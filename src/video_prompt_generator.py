@@ -57,5 +57,5 @@ Timed Captions:{}
     ))
 
     text = response.text
-    print("Text", text)
+    print("Prompt time: ", text)
     return text

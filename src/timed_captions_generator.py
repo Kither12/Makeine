@@ -1,89 +1,60 @@
-import whisper_timestamped as whisper
-from whisper_timestamped import load_model, transcribe_timestamped
+import whisper
 import re
 
 
-def generate_timed_captions(audio_filename, model_size="base"):
-    WHISPER_MODEL = load_model(model_size)
+def generate_timed_captions(audio_filename, model_size="small"):
+    transcript = whisper.load_model(model_size).transcribe(word_timestamps=True, audio=audio_filename, condition_on_previous_text = False)
 
-    gen = transcribe_timestamped(
-        WHISPER_MODEL, audio_filename, verbose=False, fp16=False)
-
-    return getCaptionsWithTime(gen)
+    return getCaptionsWithTime(transcript)
 
 
 def splitWordsBySize(words, maxCaptionSize):
 
-    halfCaptionSize = maxCaptionSize / 2
     captions = []
-    while words:
-        caption = words[0]
-        words = words[1:]
-        while words and len(caption + ' ' + words[0]) <= maxCaptionSize:
-            caption += ' ' + words[0]
-            words = words[1:]
-            if len(caption) >= halfCaptionSize and words:
-                break
-        captions.append(caption)
+    cur_caption = ""
+    for i, word in enumerate(words):
+        if len(cur_caption) < maxCaptionSize:
+            if cur_caption != "":
+                cur_caption += " "
+            cur_caption += word
+        else:
+            captions.append((cur_caption, i))
+            cur_caption = word
+    captions.append((cur_caption, len(words)))
     return captions
 
-
-def getTimestampMapping(whisper_analysis):
-
-    index = 0
-    locationToTimestamp = {}
-    for segment in whisper_analysis['segments']:
-        for word in segment['words']:
-            newIndex = index + len(word['text'])+1
-            locationToTimestamp[(index, newIndex)] = word['end']
-            index = newIndex
-    return locationToTimestamp
-
-
-def cleanWord(word):
-
-    return re.sub(r'[^\w\s\-_"\'\']', '', word)
-
-
-def interpolateTimeFromDict(word_position, d):
-
-    for key, value in d.items():
-        if key[0] <= word_position <= key[1]:
-            return value
+def get_end_time_segment(w, transcript):
+    cnt = 0
+    for segment in transcript["segments"]:
+        for word_segment in segment["words"]:
+            cnt += 1
+            if w == cnt:
+                return word_segment["end"]
     return None
 
 
-def getCaptionsWithTime(whisper_analysis, maxCaptionSize=15, maxWordsSize=45):
+def getCaptionsWithTime(transcript, maxCaptionSize=15, maxWordsSize=45):
 
-    wordLocationToTime = getTimestampMapping(whisper_analysis)
     VideoPairs = []
     CaptionsPairs = []
-    text = whisper_analysis['text']
 
-    sentences = re.split(r'(?<=[.!?]) +', text)
-    captions = [word for sentence in sentences for word in splitWordsBySize(
-        sentence.split(), maxCaptionSize)]
-    words = [word for sentence in sentences for word in splitWordsBySize(
-        sentence.split(), maxWordsSize)]
+    word_text = [word_segment["word"] for segment in transcript["segments"] for word_segment in segment["words"]]
 
-    position = 0
+    captions = splitWordsBySize(word_text, maxCaptionSize)
+    words = splitWordsBySize(word_text, maxWordsSize)
+
     start_time = 0
     end_time = 0
-    for word in captions:
-        position += len(word) + 1
-        end_time = interpolateTimeFromDict(position, wordLocationToTime)
-        if end_time and word:
-            CaptionsPairs.append(((start_time, end_time), word))
-            start_time = end_time
-
-    position = 0
+    cnt = 0
+    for word, i in captions:
+        end_time = get_end_time_segment(i, transcript)
+        CaptionsPairs.append(((start_time, end_time), word))
+        start_time = end_time
     start_time = 0
     end_time = 0
-    for sentence in words:
-        position += len(sentence) + 1
-        end_time = interpolateTimeFromDict(position, wordLocationToTime)
-        if end_time and sentence:
-            VideoPairs.append(((start_time, end_time), sentence))
-            start_time = end_time
+    for sentence, i in words:
+        end_time = get_end_time_segment(i, transcript)
+        VideoPairs.append(((start_time, end_time), sentence))
+        start_time = end_time
 
-    return (CaptionsPairs, VideoPairs)
+    return CaptionsPairs, VideoPairs

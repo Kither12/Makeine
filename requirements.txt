@@ -4,6 +4,6 @@ moviepy==1.0.3
 protobuf==5.28.2
 python-dotenv==1.0.1
 torch==2.4.1
-whisper_timestamped==1.15.4
+whisper
 google-generativeai
 accelerate

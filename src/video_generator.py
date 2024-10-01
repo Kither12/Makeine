@@ -17,8 +17,6 @@ def generate_video(script):
     asyncio.run(generate_audio(script, SAMPLE_FILE_NAME))
 
     timed_captions, timed_videos = generate_timed_captions(SAMPLE_FILE_NAME)
-    main_keywords = generateMainKeyWords(script)
     prompt_terms = getVideoPromptTimed(script, timed_videos)
-    print(prompt_terms)
     uvideo = get_output_media(
-        SAMPLE_FILE_NAME, timed_captions, prompt_terms, main_keywords)
+        SAMPLE_FILE_NAME, timed_captions, prompt_terms)
