@@ -3,5 +3,5 @@ bin
 include
 lib
 lib64
-
 .env
+__pycache__

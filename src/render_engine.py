@@ -9,13 +9,17 @@ from moviepy.editor import (AudioFileClip, CompositeVideoClip, CompositeAudioCli
 from moviepy.audio.fx.audio_loop import audio_loop
 from moviepy.audio.fx.audio_normalize import audio_normalize
 from src.gif_generator import GifGenerator
+from moviepy.config import change_settings
 
 def remove_redundant_spaces_and_newlines(input_string):
     return ' '.join(input_string.replace('\n', ' ').split())
 
 def search_program(program_name):
     try:
-        search_cmd = "which"
+        if platform.system() == "Windows":
+            search_cmd = "where"
+        else:
+            search_cmd = "which"
         return subprocess.check_output([search_cmd, program_name]).decode().strip()
     except subprocess.CalledProcessError:
         return None
@@ -33,7 +37,8 @@ def get_output_media(audio_file_path, timed_captions, background_video_data):
         os.environ['IMAGEMAGICK_BINARY'] = magick_path
     else:
         os.environ['IMAGEMAGICK_BINARY'] = '/usr/bin/convert'
-
+    if platform.system() == "Windows":
+        change_settings({"IMAGEMAGICK_BINARY": magick_path})
     gif_generator = GifGenerator()
     visual_clips = []
     for (t1, t2), prompt in background_video_data:
@@ -48,21 +53,17 @@ def get_output_media(audio_file_path, timed_captions, background_video_data):
     audio_clips = []
     audio_file_clip = AudioFileClip(audio_file_path)
     audio_clips.append(audio_file_clip)
-
     for (t1, t2), text in timed_captions:
         text_clip = TextClip(txt=remove_redundant_spaces_and_newlines(text), fontsize=40, color="white",
                              stroke_width=1, stroke_color="black", method="caption", font='JetBrains-Mono-Bold-Nerd-Font-Complete', align='center')
         text_clip = text_clip.set_start(t1)
         text_clip = text_clip.set_end(t2)
         visual_clips.append(text_clip)
-
     video = CompositeVideoClip(visual_clips)
-
     if audio_clips:
         audio = CompositeAudioClip(audio_clips)
         video.duration = audio.duration
         video.audio = audio
-
     video.write_videofile(OUTPUT_FILE_NAME, codec='libx264',
                           audio_codec='aac', fps=25, preset='veryfast')
 
